@@ -1,0 +1,13 @@
+
+source ~/.profile
+
+workon cv
+
+cd pi-face-recognition
+
+python build_face_dataset.py --cascade haarcascade_frontalface_default.xml \
+	--output dataset/arun
+
+python encode_faces.py --dataset dataset --encodings encodings.pickle --detection-method hog
+
+python pi_face_recognition.py --cascade haarcascade_frontalface_default.xml --encodings encodings.pickle
