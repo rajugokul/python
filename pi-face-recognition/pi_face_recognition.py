@@ -11,12 +11,33 @@ import pickle
 import time
 import cv2
 from picamera import PiCamera
-import urllib3
-http = urllib3.PoolManager()
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+from email.mime.image import MIMEImage
+
+fromaddr = "dhineshrajan1896@gmail.com"
+toaddr = "dhineshtnr1896@gmail.com"
+mail = MIMEMultipart()
+
+mail['From'] = fromaddr
+mail['To'] = toaddr
+mail['Subject'] = "Attachment"
+body = "Please find the attachment"
+
+red=24
+green=23
 import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
-GPIO.setup(16,GPIO.OUT)
+GPIO.setup(red,GPIO.OUT)
+GPIO.setup(green,GPIO.OUT)
+GPIO.output(red,GPIO.LOW)
+GPIO.output(green,GPIO.LOW)
+
+
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-c", "--cascade", required=True,
@@ -39,6 +60,30 @@ time.sleep(2.0)
 
 # start the FPS counter
 fps = FPS().start()
+
+def sendMail(data):
+    mail.attach(MIMEText(body, 'plain'))
+    print (data)
+    dat='/home/pi/pi-face-recognition/%s'%data
+    print (dat)
+    attachment = open(dat, 'rb')
+    image=MIMEImage(attachment.read())
+    attachment.close()
+    mail.attach(image)
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(fromaddr, "dhineshrajan1896@")
+    text = mail.as_string()
+    server.sendmail(fromaddr, toaddr, text)
+    server.quit()
+
+def capture_image():
+    frame = vs.read()
+    #imageName = str(time.strftime("%Y_%m_%d_%H_%M")) + '.jpg'
+    imageName ='unknown.jpg'
+    cv2.imwrite(imageName, frame)
+    time.sleep(1)
+    sendMail(imageName)
 
 # loop over frames from the video file stream
 while True:
@@ -93,11 +138,13 @@ while True:
 			# will select first entry in the dictionary)
 			name = max(counts, key=counts.get)
 			print (name)
-			GPIO.output(16,GPIO.HIGH)
-			r=http.request('GET','http://inplanttrainingchennai.in/iot-projects/stu-monitor/get.php?s1=%s'%name)
-			print(r.status)
-			time.sleep(7)
-			GPIO.output(16,GPIO.LOW)
+			GPIO.output(green,GPIO.HIGH)
+			time.sleep(.5)
+			GPIO.output(green,GPIO.LOW)
+		if(name=="Unknown"):
+                    GPIO.output(red,GPIO.HIGH)
+                    capture_image()
+                    GPIO.output(red,GPIO.LOW)
 		
 		# update the list of names
 		names.append(name)
